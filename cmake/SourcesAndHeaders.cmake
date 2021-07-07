@@ -1,12 +1,12 @@
 set(sources
-    src/tmp.cpp
+	src/tmp.cpp
 )
 
 set(exe_sources
-		src/main.cpp
-		${sources}
+	src/main.cpp
+	${sources}
 )
 
 set(headers
-    include/project/tmp.hpp
+	include/project/tmp.hpp
 )
