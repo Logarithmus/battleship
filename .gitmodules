@@ -1,0 +1,9 @@
+[submodule "3rdparty/cbor-cpp"]
+	path = 3rdparty/cbor-cpp
+	url = https://github.com/naphaso/cbor-cpp
+[submodule "3rdparty/boost-beast"]
+	path = 3rdparty/boost-beast
+	url = https://github.com/boostorg/beast
+[submodule "3rdparty/boost-container"]
+	path = 3rdparty/boost-container
+	url = https://github.com/boostorg/container
