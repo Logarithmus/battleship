@@ -1,7 +1,6 @@
 [![Actions Status](https://github.com/Logarithmus/battleship/workflows/Ubuntu/badge.svg)](https://github.com/Logarithmus/battleship/actions)
 [![Actions Status](https://github.com/Logarithmus/battleship/workflows/Windows/badge.svg)](https://github.com/Logarithmus/battleship/actions)
 [![Actions Status](https://github.com/Logarithmus/battleship/workflows/MacOS/badge.svg)](https://github.com/Logarithmus/battleship/actions)
-[![codecov](https://codecov.io/gh/Logarithmus/battleship/branch/master/graph/badge.svg)](https://codecov.io/gh/Logarithmus/battleship)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Logarithmus/battleship)](https://github.com/Logarithmus/battleship/releases)
 
 # Battleship game
