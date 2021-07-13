@@ -8,8 +8,8 @@ Yet another implementation of Battleship game in C++ with GUI in SFML & server t
 
 ## Roadmap
 - [x] Common data structures & algorithms (`Grid`, `PlayerGrid`, etc.)
-- [ ] Server
-- [ ] SFML GUI
+- [ ] Server (WIP)
+- [ ] SFML GUI (WIP)
 
 ### Prerequisites
 
