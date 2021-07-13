@@ -1,9 +1,9 @@
-[submodule "3rdparty/cbor-cpp"]
-	path = 3rdparty/cbor-cpp
-	url = https://github.com/naphaso/cbor-cpp
-[submodule "3rdparty/boost-beast"]
-	path = 3rdparty/boost-beast
+[submodule "common/3rdparty/boost-beast"]
+	path = common/3rdparty/boost-beast
 	url = https://github.com/boostorg/beast
-[submodule "3rdparty/boost-container"]
-	path = 3rdparty/boost-container
-	url = https://github.com/boostorg/container
+[submodule "common/3rdparty/tinycbor"]
+	path = common/3rdparty/tinycbor
+	url = https://github.com/intel/tinycbor
+[submodule "client/sfml_client/3rdparty/SFML"]
+	path = client/sfml_client/3rdparty/SFML
+	url = https://github.com/SFML/SFML

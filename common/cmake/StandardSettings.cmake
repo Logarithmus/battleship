@@ -1,3 +1,7 @@
+if(NOT CMAKE_BUILD_TYPE)
+	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the build type" FORCE)
+endif()
+
 # Project settings
 option(${PROJECT_NAME}_BUILD_EXECUTABLE "Build the project as an executable, rather than a library." OFF)
 option(${PROJECT_NAME}_BUILD_HEADERS_ONLY "Build the project as a header-only library." OFF)
@@ -8,14 +12,14 @@ option(${PROJECT_NAME}_WARNINGS_AS_ERRORS "Treat compiler warnings as errors." O
 
 # Package managers
 # Currently supporting: Conan, Vcpkg.
-option(${PROJECT_NAME}_ENABLE_CONAN "Enable the Conan package manager for this project." OFF)
+option(${PROJECT_NAME}_ENABLE_CONAN "Enable the Conan package manager for this project." ON)
 option(${PROJECT_NAME}_ENABLE_VCPKG "Enable the Vcpkg package manager for this project." OFF)
 
 # Unit testing
 # Currently supporting: GoogleTest, Catch2.
-option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests for the projects (from the `test` subfolder)." ON)
+option(${PROJECT_NAME}_ENABLE_UNIT_TESTING "Enable unit tests for the projects (from the `test` subfolder)." OFF)
 
-option(${PROJECT_NAME}_USE_GTEST "Use the GoogleTest project for creating unit tests." ON)
+option(${PROJECT_NAME}_USE_GTEST "Use the GoogleTest project for creating unit tests." OFF)
 option(${PROJECT_NAME}_USE_GOOGLE_MOCK "Use the GoogleMock project for extending the unit tests." OFF)
 
 option(${PROJECT_NAME}_USE_CATCH2 "Use the Catch2 project for creating unit tests." OFF)
@@ -23,7 +27,7 @@ option(${PROJECT_NAME}_USE_CATCH2 "Use the Catch2 project for creating unit test
 # Static analyzers
 # Currently supporting: Clang-Tidy, Cppcheck.
 option(${PROJECT_NAME}_ENABLE_CLANG_TIDY "Enable static analysis with Clang-Tidy." ON)
-option(${PROJECT_NAME}_ENABLE_CPPCHECK "Enable static analysis with Cppcheck." OFF)
+option(${PROJECT_NAME}_ENABLE_CPPCHECK "Enable static analysis with Cppcheck." ON)
 
 # Code coverage
 option(${PROJECT_NAME}_ENABLE_CODE_COVERAGE "Enable code coverage through GCC." OFF)
@@ -50,8 +54,8 @@ if(${PROJECT_NAME}_ENABLE_LTO)
 	include(CheckIPOSupported)
 	check_ipo_supported(RESULT result OUTPUT output)
 	if(result)
-			set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 	else()
-			message(SEND_ERROR "IPO is not supported: ${output}.")
+		message(SEND_ERROR "IPO is not supported: ${output}.")
 	endif()
 endif()

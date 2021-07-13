@@ -1,0 +1,5 @@
+---
+Checks: '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*,-llvmlibc-*,-misc-non-private-member-variables-in-classes,-cert-dcl21-cpp,-altera-struct-pack-align'
+WarningsAsErrors: '*'
+HeaderFilterRegex: ''
+FormatStyle: none
