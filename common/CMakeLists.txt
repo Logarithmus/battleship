@@ -85,6 +85,8 @@ set(BUILD_TESTING ${BUILD_TESTING_SAVED} CACHE BOOL "build certify tests" FORCE)
 
 # tinycbor
 include(ExternalProject)
+set(TINYCBOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/include)
+set(TINYCBOR_LIB_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/lib)
 find_program(MAKE_EXECUTABLE NAMES gmake mingw32-make make NAMES_PER_DIR DOC "GNU Make")
 set(tinycbor_src ${PROJECT_SOURCE_DIR}/3rdparty/tinycbor)
 ExternalProject_Add(tinycbor_build
@@ -92,12 +94,10 @@ ExternalProject_Add(tinycbor_build
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} ${_targ}
 	INSTALL_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} install prefix=${PROJECT_BINARY_DIR}/3rdparty/tinycbor
-	BUILD_BYPRODUCTS ${tinycbor_LIBRARIES}  # Ninja needs this
+	BUILD_BYPRODUCTS ${TINYCBOR_LIB_DIR}/libtinycbor.so  # Ninja needs this
 )
 
 add_library(tinycbor SHARED IMPORTED)
-SET(TINYCBOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/include)
-SET(TINYCBOR_LIB_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/lib)
 add_dependencies(tinycbor tinycbor_build)
 set_target_properties(tinycbor PROPERTIES IMPORTED_LOCATION ${TINYCBOR_LIB_DIR}/libtinycbor.so)
 
@@ -139,6 +139,7 @@ configure_file(
 	include/${PROJECT_NAME_LOWERCASE}/version.hpp
 	@ONLY
 )
+
 
 install(
 	FILES ${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME_LOWERCASE}/version.hpp
