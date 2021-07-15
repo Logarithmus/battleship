@@ -2,8 +2,7 @@ cmake_minimum_required(VERSION 3.15)
 
 # Project details
 project(
-	"battleship-common"
-	VERSION 0.1.0 
+	"battleship-common" VERSION 0.1.0 
 	LANGUAGES CXX
 )
 
@@ -37,7 +36,6 @@ add_library(
 	${sources}
 )
 
-
 verbose_message("Found the following header files:")
 verbose_message(${headers})
 verbose_message("Found the following source files:")
@@ -56,23 +54,13 @@ include(cmake/CompilerWarnings.cmake)
 set_project_warnings(${PROJECT_NAME})
 verbose_message("Applied compiler warnings. Using standard ${CXX_STANDARD}.\n")
 
-# Set the build/user include directories
-# Allow usage of header files in the `src` directory, but only for utilities
-target_include_directories(
-	${PROJECT_NAME}
-	PUBLIC 
-		$<INSTALL_INTERFACE:include>		
-		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-	PRIVATE
-		${CMAKE_CURRENT_SOURCE_DIR}/src
-)
 
 message(STATUS "Finished setting up include directories.")
 
 set(Beast_BUILD_EXAMPLES OFF CACHE BOOL "enable beast examples" FORCE)
 set(Beast_BUILD_TESTS OFF CACHE BOOL "enable beast tests" FORCE)
 
-# Trye to find required Boost libraries, if not found, then install them from Conan
+# Try to find required Boost libraries, if not found, then install them from Conan
 find_package(Boost 1.76 COMPONENTS coroutine filesystem system thread)
 if(NOT Boost_FOUND)
 	message(STATUS "Boost not found, downloading it from Conan")
@@ -88,34 +76,62 @@ if(NOT Boost_FOUND)
 	include(${PROJECT_BINARY_DIR}/FindBoost.cmake)
 endif()
 
-# Boost.Beast
 add_subdirectory(3rdparty/boost-beast)
+
+set(BUILD_TESTING_SAVED ${BUILD_TESTING})
+set(BUILD_TESTING OFF CACHE BOOL "build ceritfy tests" FORCE)
+add_subdirectory(3rdparty/certify)
+set(BUILD_TESTING ${BUILD_TESTING_SAVED} CACHE BOOL "build certify tests" FORCE)
 
 # tinycbor
 include(ExternalProject)
 find_program(MAKE_EXECUTABLE NAMES gmake mingw32-make make NAMES_PER_DIR DOC "GNU Make")
 set(tinycbor_src ${PROJECT_SOURCE_DIR}/3rdparty/tinycbor)
-ExternalProject_Add(tinycbor
+ExternalProject_Add(tinycbor_build
 	SOURCE_DIR ${tinycbor_src}
 	CONFIGURE_COMMAND ""
 	BUILD_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} ${_targ}
-	INSTALL_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} install prefix=${PROJECT_BINARY_DIR}
+	INSTALL_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} install prefix=${PROJECT_BINARY_DIR}/3rdparty/tinycbor
 	BUILD_BYPRODUCTS ${tinycbor_LIBRARIES}  # Ninja needs this
+)
+
+add_library(tinycbor SHARED IMPORTED)
+SET(TINYCBOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/include)
+SET(TINYCBOR_LIB_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/lib)
+add_dependencies(tinycbor tinycbor_build)
+set_target_properties(tinycbor PROPERTIES IMPORTED_LOCATION ${TINYCBOR_LIB_DIR}/libtinycbor.so)
+
+find_package(OpenSSL REQUIRED)
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_NAME}
+	Threads::Threads
+	${OPENSSL_LIBRARIES}
+	lib-beast	
+	tinycbor
 )
 
 verbose_message("Successfully added all dependencies and linked against them.")
 
-# Provide alias to library for 
-if(${PROJECT_NAME}_BUILD_EXECUTABLE)
-	add_executable(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-else()
-	add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-endif()
+# Set the build/user include directories
+# Allow usage of header files in the `src` directory, but only for utilities
+target_include_directories(
+	${PROJECT_NAME}
+	SYSTEM
+	PUBLIC 
+		${Boost_INCLUDE_DIRS}
+		3rdparty/boost-beast/include
+		3rdparty/certify/include
+		3rdparty/tinycbor/src
+)
 
-verbose_message("Project is now aliased as ${PROJECT_NAME}::${PROJECT_NAME}.\n")
-
-# Format the project using the `clang-format` target (i.e: cmake --build build --target clang-format)
-add_clang_format_target()
+target_include_directories(
+	${PROJECT_NAME}
+	PUBLIC
+		$<INSTALL_INTERFACE:include>		
+		$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+	PRIVATE
+		${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
 # Add version header
 configure_file(

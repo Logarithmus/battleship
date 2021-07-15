@@ -5,10 +5,11 @@ project(
 	LANGUAGES CXX
 )
 
-
 add_subdirectory(common)
 add_subdirectory(server)
 add_subdirectory(client/library)
-add_subdirectory(client/sfml_client)
+add_subdirectory(client/sfml)
 
-add_dependencies(battleship-common BoostContainer)
+add_dependencies(battleship-server battleship-common)
+add_dependencies(battleship-client-library battleship-common)
+add_dependencies(battleship-client-sfml battleship-client-library)

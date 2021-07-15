@@ -1,8 +1,8 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.16)
 
 # Project details
 project(
-	"battleship-common"
+	"battleship-server"
 	VERSION 0.1.0 
 	LANGUAGES CXX
 )
@@ -26,26 +26,15 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
 	message(FATAL_ERROR "In-source builds not allowed. Please make a new directory (called a build directory) and run CMake from there.\n")
 endif()
 
-
 # Create library, setup header and source files
 # Find all headers and implementation files
 include(cmake/SourcesAndHeaders.cmake)
 
-add_library(
-	${PROJECT_NAME}
-	${headers}
-	${sources}
-)
+add_executable(${PROJECT_NAME} ${exe_sources})
+target_precompile_headers(${PROJECT_NAME} PRIVATE src/pch.hpp)
 
-
-verbose_message("Found the following header files:")
-verbose_message(${headers})
 verbose_message("Found the following source files:")
-if(${PROJECT_NAME}_BUILD_EXECUTABLE)
-	verbose_message(${exe_sources})
-else()
-	verbose_message(${sources})
-endif()
+verbose_message(${exe_sources})
 message(STATUS "Added all header and implementation files.\n")
 
 # Set standard & warnings
@@ -69,53 +58,8 @@ target_include_directories(
 
 message(STATUS "Finished setting up include directories.")
 
-set(Beast_BUILD_EXAMPLES OFF CACHE BOOL "enable beast examples" FORCE)
-set(Beast_BUILD_TESTS OFF CACHE BOOL "enable beast tests" FORCE)
-
-# Trye to find required Boost libraries, if not found, then install them from Conan
-find_package(Boost 1.76 COMPONENTS coroutine filesystem system thread)
-if(NOT Boost_FOUND)
-	message(STATUS "Boost not found, downloading it from Conan")
-	# Enable package manager
-	include(cmake/Conan.cmake)
-	conan_cmake_configure(REQUIRES "boost/[>=1.76.0 <1.77.0]" GENERATORS cmake_find_package)
-	conan_cmake_autodetect(settings)
-	conan_cmake_install(
-		PATH_OR_REFERENCE . BUILD missing
-		REMOTE conan-center SETTINGS ${settings}
-	)
-	include(${PROJECT_BINARY_DIR}/Findlibbacktrace.cmake)
-	include(${PROJECT_BINARY_DIR}/FindBoost.cmake)
-endif()
-
-# Boost.Beast
-add_subdirectory(3rdparty/boost-beast)
-
-# tinycbor
-include(ExternalProject)
-find_program(MAKE_EXECUTABLE NAMES gmake mingw32-make make NAMES_PER_DIR DOC "GNU Make")
-set(tinycbor_src ${PROJECT_SOURCE_DIR}/3rdparty/tinycbor)
-ExternalProject_Add(tinycbor
-	SOURCE_DIR ${tinycbor_src}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} ${_targ}
-	INSTALL_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} install prefix=${PROJECT_BINARY_DIR}
-	BUILD_BYPRODUCTS ${tinycbor_LIBRARIES}  # Ninja needs this
-)
-
+target_link_libraries(${PROJECT_NAME} battleship-common)
 verbose_message("Successfully added all dependencies and linked against them.")
-
-# Provide alias to library for 
-if(${PROJECT_NAME}_BUILD_EXECUTABLE)
-	add_executable(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-else()
-	add_library(${PROJECT_NAME}::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-endif()
-
-verbose_message("Project is now aliased as ${PROJECT_NAME}::${PROJECT_NAME}.\n")
-
-# Format the project using the `clang-format` target (i.e: cmake --build build --target clang-format)
-add_clang_format_target()
 
 # Add version header
 configure_file(

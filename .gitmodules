@@ -4,6 +4,9 @@
 [submodule "common/3rdparty/tinycbor"]
 	path = common/3rdparty/tinycbor
 	url = https://github.com/intel/tinycbor
-[submodule "client/sfml_client/3rdparty/SFML"]
-	path = client/sfml_client/3rdparty/SFML
+[submodule "common/3rdparty/certify"]
+	path = common/3rdparty/certify
+	url = https://github.com/djarek/certify
+[submodule "client/sfml/3rdparty/SFML"]
+	path = client/sfml/3rdparty/SFML
 	url = https://github.com/SFML/SFML
