@@ -78,10 +78,12 @@ namespace battleship {
 		TooManyShips
 	};
 
-	template<u8 ROWS, u8 COLS, Rules RULES>
+	template<u8 ROWS, u8 COLS, u8 SHIP_TYPE_COUNT, const std::array<u8, SHIP_TYPE_COUNT>& RULES>
 	struct Ships {
-		static constexpr Rectangle RECT {{0, 0}, {ROWS, COLS}};
-		static constexpr size_t SHIP_COUNT {std::accumulate(RULES.begin(), RULES.end())};
+		static constexpr Rectangle RECT {Position{0, 0}, Position{ROWS, COLS}};
+		static constexpr size_t SHIP_COUNT {
+			std::accumulate(RULES.begin(), RULES.end(), static_cast<u8>(0))
+		};
 
 		inline Result<std::monostate, ShipPlacementError> push(Ship&& ship) {
 			u8 len = ship.length();
@@ -118,33 +120,48 @@ namespace battleship {
 				&& std::equal(actual_count.begin(), actual_count.end(), RULES.begin());
 		}
 	private:
-		boost::static_vector<Ship, SHIP_COUNT> ships;
+		boost::container::static_vector<Ship, SHIP_COUNT> ships;
 		std::array<u8, RULES.size()> actual_count {};
 	};
 
-	template<u8 ROWS, u8 COLS, Rules RULES, u8 SHIP_TYPE_COUNT>
+	template<u8 ROWS, u8 COLS, u8 SHIP_TYPE_COUNT, const std::array<u8, SHIP_TYPE_COUNT>& RULES>
 	class PlayerField {
 	public:
-		inline Result<PlayerField&, ShipPlacementError> place_ship(Ship&& ship) {
-			auto push_result = ships.push(ship);
-			if (push_result.index() == 1) {
-				return std::get<1>(push_result);
-			}
-
-			for (const auto& pos: ship.zone) {
-				grid.place_ship(pos);
-			}
-			
-			return *this;
-		}
-
 		[[nodiscard]] inline bool is_full() const {
 			return ships.is_full();
 		}
 	private:
 		Grid<ROWS, COLS> grid;
-		Ships<ROWS, COLS, RULES> ships;
+		Ships<ROWS, COLS, SHIP_TYPE_COUNT, RULES> ships;
 	};
-}
+
+	template<u8 ROWS, u8 COLS, u8 SHIP_TYPE_COUNT, const std::array<u8, SHIP_TYPE_COUNT>& RULES>
+	class PlayerFieldBuilder {
+	public:
+		using Field = PlayerField<ROWS, COLS, SHIP_TYPE_COUNT, RULES>;
+
+		inline Result<PlayerFieldBuilder&, ShipPlacementError> place_ship(Ship&& ship) {
+			auto push_result = player_field.ships.push(ship);
+			// return early in case of error
+			if (push_result.index() == 1) {
+				return std::get<1>(push_result);
+			}
+			for (auto pos: ship.zone) { // NOLINT
+				player_field.grid.place_ship(pos);
+			}
+			return *this;
+		}
+
+		[[nodiscard]]
+		inline std::optional<Field> build() const {
+			if (player_field.is_full()) {
+				return player_field;
+			}
+			return {};
+		}
+	private:
+		Field player_field;
+	};
+} // namespace battleship
 
 #endif //BATTLESHIP_COMMON_HPP

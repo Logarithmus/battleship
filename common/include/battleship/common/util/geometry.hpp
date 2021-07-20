@@ -3,7 +3,7 @@
 
 #include <utility>
 #include <compare>
-#include "util/num_types.hpp"
+#include "num_types.hpp"
 
 namespace battleship {
 	struct Offset {
@@ -45,8 +45,8 @@ namespace battleship {
 	};
 
 	struct Rectangle {
-		struct Iterator {
-			Iterator(u8 cols, const Position& pos): cols{cols}, pos{pos} {}
+		struct Iter {
+			Iter(u8 cols, const Position& pos): cols{cols}, pos{pos} {}
 
 			inline Position& operator*() {
 				return pos;
@@ -56,7 +56,7 @@ namespace battleship {
 				return &pos;
 			}
 
-			inline Iterator& operator++() {
+			inline Iter& operator++() {
 				if (pos.col < cols - 1) {
 					++pos.col;
 				} else {
@@ -66,17 +66,17 @@ namespace battleship {
 				return *this;
 			}
 
-			inline Iterator operator++(int) {
+			inline Iter operator++(int) {
 				auto old = *this;
 				++(*this);
 				return old;
 			}
+
+			friend auto operator<=>(const Iter& iter1, const Iter& iter2) = default;
 		private:
 			u8 cols;
 			Position pos;
 		};
-
-		using Iter = Iterator;
 
 		Position first, last;
 	

@@ -1,4 +1,4 @@
-#include "util/geometry.hpp"
+#include "battleship/common/util/geometry.hpp"
 
 namespace battleship {
 	// struct Offset

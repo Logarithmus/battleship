@@ -83,31 +83,30 @@ set(BUILD_TESTING OFF CACHE BOOL "build ceritfy tests" FORCE)
 add_subdirectory(3rdparty/certify)
 set(BUILD_TESTING ${BUILD_TESTING_SAVED} CACHE BOOL "build certify tests" FORCE)
 
-# tinycbor
-include(ExternalProject)
-set(TINYCBOR_INCLUDE_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/include)
-set(TINYCBOR_LIB_DIR ${PROJECT_BINARY_DIR}/3rdparty/tinycbor/lib)
-find_program(MAKE_EXECUTABLE NAMES gmake mingw32-make make NAMES_PER_DIR DOC "GNU Make")
-set(tinycbor_src ${PROJECT_SOURCE_DIR}/3rdparty/tinycbor)
-ExternalProject_Add(tinycbor_build
-	SOURCE_DIR ${tinycbor_src}
-	CONFIGURE_COMMAND ""
-	BUILD_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} ${_targ}
-	INSTALL_COMMAND ${MAKE_EXECUTABLE} -j${Ncpu} -C ${tinycbor_src} install prefix=${PROJECT_BINARY_DIR}/3rdparty/tinycbor
-	BUILD_BYPRODUCTS ${TINYCBOR_LIB_DIR}/libtinycbor.so  # Ninja needs this
-)
-
-add_library(tinycbor SHARED IMPORTED)
-add_dependencies(tinycbor tinycbor_build)
-set_target_properties(tinycbor PROPERTIES IMPORTED_LOCATION ${TINYCBOR_LIB_DIR}/libtinycbor.so)
+# Try to find required nlohmann_json library, if not found, then install it from Conan
+find_package(nlohmann_json 3.9)
+if(NOT nlohmann_json_FOUND)
+	message(STATUS "nlohmann_json not found, downloading it from Conan")
+	# Enable package manager
+	include(cmake/Conan.cmake)
+	conan_cmake_configure(
+		REQUIRES "nlohmann_json/[>=3.9.0 <3.10.0]"
+		GENERATORS cmake_find_package
+	)
+	conan_cmake_autodetect(settings)
+	conan_cmake_install(
+		PATH_OR_REFERENCE . BUILD missing
+		REMOTE conan-center SETTINGS ${settings}
+	)
+	include(${PROJECT_BINARY_DIR}/Findnlohmann_json.cmake)
+endif()
 
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME}
 	Threads::Threads
 	${OPENSSL_LIBRARIES}
-	lib-beast	
-	tinycbor
+	# lib-beast	
 )
 
 verbose_message("Successfully added all dependencies and linked against them.")
@@ -120,8 +119,8 @@ target_include_directories(
 	PUBLIC 
 		${Boost_INCLUDE_DIRS}
 		3rdparty/boost-beast/include
-		3rdparty/certify/include
-		3rdparty/tinycbor/src
+		3rdparty
+		${nlohmann_json_INCLUDE_DIRS}
 )
 
 target_include_directories(

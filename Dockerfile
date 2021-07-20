@@ -7,6 +7,7 @@ RUN echo "Installing dependencies..."
 RUN apk add \
 	cmake \
 	make \
+	ninja \
 	gcc \
 	g++ \
 	openssl-dev \

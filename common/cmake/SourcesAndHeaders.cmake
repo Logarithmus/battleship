@@ -1,6 +1,6 @@
 file(GLOB headers 
-	include/*.hpp
-	include/util/*.hpp
+	include/battleship/common/*.hpp
+	include/battleship/common/util/*.hpp
 )
 
 file(GLOB sources
