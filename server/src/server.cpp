@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <span>
+#include <unordered_map>
 #include <boost/beast/http/vector_body.hpp>
 #include <boost/container/static_vector.hpp>
 #include <boost/uuid/random_generator.hpp>
@@ -85,93 +86,112 @@ namespace battleship {
 		}
 	
 		boost::uuids::random_generator_mt19937 uuid_generator;
+		PlayerList players;
+		PlayerQueue players_queue;
+		std::vector<Room> rooms;
+		RoomMap room_map;
 	
 	    // Respond to GET request
-		if ( (req.target() == "/start") && (req.method() == http::verb::get) ) {
-			// Check ships positions & return the result to player
-			if (req.target() == "/start") {
-				json req_body = json::from_cbor(req.body());
-				std::array<Ship, 10> ships = std::req_body["ships"];
+		if ( (req.target() == "/start") && (req.method() == http::verb::post) ) {
+			StdShips test_ships;
+			test_ships.push(Ship{{{0, 0}, {0, 3}}});
+			json j{test_ships};
+			std::cout << j << '\n';
 
-				// if ships are ok, generate UUID, put player in a queue & return UUID
-				if (ships.are_ok()) {
-					UUID uuid = json::binary(vec_from_uuid(uuid_generator()));
-					players_queue.push_back({uuid, ships});
-					//
-					// TODO: put player in a queue
-					//
-					json response_body;
-					response_body["uuid"] = uuid;
-					return send(cbor_response(http::status::ok, response_body));
-				}
-				// else return bad request & reason
-				return send(cbor_str_response(
-					http::status::bad_request, "Bad ships layout"
-				));
+			// Check ships positions & return the result to player
+			auto ships = json::from_cbor(req.body()).get<StdShips>();
+			std::cout << "ships: " << json::from_cbor(req.body()) << std::endl;
+			auto player_result = Player::try_from_ships(std::move(ships));
+			std::cout << "player_result: " << is_ok(player_result) << '\n';
+			// if player is ok, generate UUID, put player in a queue & return their UUID
+			if (is_ok(player_result)) {
+				auto player = std::get<Player>(player_result);
+				UUID uuid = uuid_generator();
+				players.insert({uuid, player});
+				players_queue.push(uuid);
+				json response_body;
+				response_body["uuid"] = json::binary(vec_from_uuid(uuid));
+				response_body["field"] = player;
+				std::cout << "Body: \n" << response_body << '\n';
+				return send(cbor_response(http::status::ok, json::to_cbor(response_body)));
 			}
-		} else if ( (req.target() == "/shot") && (req.method() == http::verb::patch) ) {
+			// else return bad request & reason
+			return send(cbor_str_response(
+				http::status::bad_request, "Bad ships layout"
+			));
+		}
+		if ( (req.target() == "/shot") && (req.method() == http::verb::patch) ) {
 			json req_body = json::from_cbor(req.body());
 			UUIDVec uuid_vec {req_body.value("uuid", UUIDVec{})};
 			UUID uuid = uuid_from_span(UUIDSpan{uuid_vec});
 
-			// If player didn't provide UUID, then return error
-			if (!players_list.contains(uuid)) {
+			// If player provided wrong or no UUID, then return error
+			if (!players.contains(uuid)) {
 				return send(cbor_str_response(
 					http::status::unauthorized, "No player with such UUID"
 				));
 			}
-			room = rooms_list[uuid];
-			if (player1.uuid == uuid) {
-				me = player1;
-				enemy = player2;
-			} else {
-				me = player2;
-				enemy = player1;
+			auto room = rooms[room_map[uuid]];
+			auto enemy_uuid_option = room.my_enemy(uuid);
+			if (!enemy_uuid_option.has_value()) {
+				return send(cbor_str_response(
+					http::status::internal_server_error,
+					"This UUID was mapped to the room, but this room doesn't contain this UUID"
+				));
 			}
-			if (room.next_turn == &enemy) {
+			UUID enemy_uuid = enemy_uuid_option.value();
+			if (!room.is_my_move(uuid)) {
 				return send(cbor_str_response(
 					http::status::locked, "Wait for enemy's turn"
 				));
 			}
-			ShotCoords coords {req_body.at("shot")};
-			if (coords.in_bounds()) {
-				bool shot_result = enemy.grid.place_shot();
+
+			Player& enemy = players[enemy_uuid_option.value()];
+
+			std::vector<u8> shot_vec = req_body;
+			auto shot_pos = Position{shot_vec[0], shot_vec[1]};
+			if (enemy.grid.contains(shot_pos)) {
+				bool shot_result = enemy.grid.place_shot(shot_pos);
 				if (shot_result) {
-					room.next_turn = &me;
+					room.move = uuid;
 				} else {
-					room.next_turn = &enemy;
+					room.move = enemy_uuid;
 				}
 				return send(cbor_response(
-					http::status::ok, shot_result
+					http::status::ok, json::to_cbor(json{shot_result})
 				));
+			}
 		} else if ( (req.target() == "/field") && (req.method() == http::verb::get) ) {
 			json req_body = json::from_cbor(req.body());
 			UUIDVec uuid_vec {req_body.value("uuid", UUIDVec{})};
 			UUID uuid = uuid_from_span(UUIDSpan{uuid_vec});
 
-			if (!players_list.contains(uuid)) {
+			if (!players.contains(uuid)) {
 				return send(cbor_str_response(
 					http::status::unauthorized, "No player with such UUID"
 				));
 			}
 
-			room = rooms_list[uuid];
-			if (player1.uuid == uuid) {
-				me = player1;
-				enemy = player2;
-			} else {
-				me = player2;
-				enemy = player1;
-			}
-			if (room.next_turn == &enemy) {
+			Player& me = players[uuid];
+
+			auto room = rooms[room_map[uuid]];
+			auto enemy_uuid_option = room.my_enemy(uuid);
+			if (!enemy_uuid_option.has_value()) {
 				return send(cbor_str_response(
-					http::status::locked, "Waiting for enemy's turn"
-				));
-			} else {
-				return send(cbor_response(
-					http::status::ok, // my field
+					http::status::internal_server_error,
+					"This UUID was mapped to the room, but this room doesn't contain this UUID"
 				));
 			}
+			if (room.is_my_move(uuid)) {
+				json j;
+				j["field"] = me;
+				return send(cbor_response(
+					http::status::ok, std::move(json::to_cbor(j))
+				));
+			}
+			return send(cbor_str_response(
+				http::status::locked, "Wait for enemy's move"
+			));
 		}
 	}
 	
@@ -409,10 +429,10 @@ namespace battleship {
 	int server_main(int argc, char** argv) {
 	    const std::span<char*> args{ argv, static_cast<size_t>(argc) };
 	
-		const std::string CERT_PATH     = "tls/fullchain.pem";
-		const std::string CHAIN_PATH    = "tls/chain.pem";
-		const std::string PRIVKEY_PATH  = "tls/privkey.pem";
-		const std::string DH_PATH       = "tls/dhparam.pem";
+		const std::string CERT_PATH    = "tls/fullchain.pem";
+		const std::string CHAIN_PATH   = "tls/chain.pem";
+		const std::string PRIVKEY_PATH = "tls/privkey.pem";
+		const std::string DH_PATH      = "tls/dhparam.pem";
 	
 	    // Check command line arguments.
 	    if (args.size() != 3) {
