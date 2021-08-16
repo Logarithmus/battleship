@@ -7,8 +7,9 @@
 Yet another implementation of Battleship game in C++ with GUI in SFML & server to play with someone else.
 
 ## Roadmap
-- [x] Common data structures & algorithms (`Grid`, `PlayerGrid`, etc.)
+- [x] Common data structures & algorithms (`Grid`, `PlayerField`, etc.)
 - [ ] Server (WIP)
+- [ ] Client library (WIP)
 - [ ] SFML GUI (WIP)
 
 ### Prerequisites
@@ -16,7 +17,7 @@ Yet another implementation of Battleship game in C++ with GUI in SFML & server t
 You will need:
 
 * **CMake v3.15+** - found at [https://cmake.org/](https://cmake.org/)
-* **C++ Compiler** - needs to support the **C++20** standard, i.e. the latest version *MSVC*,
+* **C++ Compiler** - needs to support the **C++20** standard, i.e. the latest version of *MSVC*,
 *GCC*, *Clang* would suffice.
 
 > ***Note:*** *You also need to be able to provide ***CMake*** a supported
