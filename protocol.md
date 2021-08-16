@@ -1,3 +1,7 @@
+# Communication protocol
+
+0. CBOR in request/response body
+
 1. PUT ships to /start, receive UUID & PlayerField
 
 2. /status:
