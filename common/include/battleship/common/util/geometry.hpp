@@ -42,14 +42,15 @@ namespace battleship {
 			return *this;
 		}
 
-		auto operator<=>(const Position&) const = default; //NOLINT
+		auto operator<=>(const Position& other) const = default; //NOLINT
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Position, row, col)
 	};
 
 	struct Rectangle {
 		struct Iter {
-			Iter(u8 cols, const Position& pos): cols{cols}, pos{pos} {}
+			Iter(const Rectangle& rect, const Position& pos):
+				rect{rect}, pos{pos} {}
 
 			inline Position& operator*() {
 				return pos;
@@ -60,11 +61,15 @@ namespace battleship {
 			}
 
 			inline Iter& operator++() {
-				if (pos.col < cols - 1) {
+				// last iteration
+				if (pos.row == rect.last.row + 1) {
+					return *this;
+				}
+				if (pos.col < rect.last.col) {
 					++pos.col;
-				} else {
+				} else if (pos.row <= rect.last.row) {
 					++pos.row;
-					pos.col = 0;
+					pos.col = rect.first.col;
 				}
 				return *this;
 			}
@@ -75,9 +80,18 @@ namespace battleship {
 				return old;
 			}
 
-			friend auto operator<=>(const Iter& iter1, const Iter& iter2) = default;
+			friend std::partial_ordering operator<=>(const Iter& iter1, const Iter& iter2);
+
+			inline bool operator==(const Iter& other) const {
+				return (*this <=> other) == std::partial_ordering::equivalent;
+			}
+
+			inline bool operator!=(const Iter& other) const {
+				return (*this <=> other) != std::partial_ordering::equivalent;
+			}
+
 		private:
-			u8 cols;
+			const Rectangle& rect;
 			Position pos;
 		};
 
@@ -102,11 +116,11 @@ namespace battleship {
 		}
 
 		[[nodiscard]] inline Iter begin() const {
-			return {width(), first};
+			return {*this, first};
 		}
 
 		[[nodiscard]] inline Iter end() const {
-			return {width(), {last + Offset{1, 0}}};
+			return {*this, {static_cast<u8>(last.row + 1), first.col}};
 		}
 	
 		[[nodiscard]] inline bool contains(const Rectangle& other) const {
@@ -118,28 +132,27 @@ namespace battleship {
 				&& (point.col >= first.col) && (point.col <= last.col);
 		}
 	
-		[[nodiscard]] inline bool intersects(const Rectangle& other) const {
-			return (other.first <= last) && (other.last >= first); //NOLINT
-		}
-	
-		[[nodiscard]] inline bool touches_or_intersects(const Rectangle& other) const {
-			Offset one {1, 1};
-			Rectangle rect1 {this->first - one, this->last + one};
-			Rectangle rect2 {other.first - one, other.last + one};
-			return intersects(other);
-		}
-	
 		[[nodiscard]] inline u8 width() const {
-			return last.col - first.col + 1;
+			return static_cast<u8>(last.col - first.col + 1);
 		}
 
 		[[nodiscard]] inline u8 height() const {
-			return last.row - first.row + 1;
+			return static_cast<u8>(last.row - first.row + 1);
 		}
+
+		auto operator<=>(const Rectangle& other) const = default;
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Rectangle, first, last)
 	};
 
+	inline std::partial_ordering operator<=>(
+		const Rectangle::Iter& iter1, const Rectangle::Iter& iter2
+	) {
+		if (iter1.rect != iter2.rect) {
+			return std::partial_ordering::unordered;
+		}
+		return iter1.pos <=> iter2.pos;
+	}
 }
 
 namespace std {

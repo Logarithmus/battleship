@@ -2,9 +2,12 @@
 #define BATTLESHIP_COMMON_HPP
 
 #include <bitset>
+#include <iostream>
+#include <iomanip>
 #include <span>
 #include <nlohmann/json.hpp>
 #include <optional>
+#include <string_view>
 #include <variant>
 #include <array>
 #include <numeric>
@@ -18,6 +21,12 @@
 using nlohmann::json;
 
 namespace battleship {
+	template<u8 ROWS, u8 COLS>
+	struct Grid;
+
+	template<u8 ROWS, u8 COLS>
+	std::ostream& operator<<(std::ostream& os, const Grid<ROWS, COLS>& grid);
+
 	template<u8 ROWS, u8 COLS>
 	struct Grid {
 		static constexpr size_t SIZE = ROWS * COLS;
@@ -53,6 +62,8 @@ namespace battleship {
 			return RECT.contains(pos);
 		}
 
+		friend std::ostream& operator<< <>(std::ostream& os, const Grid& grid);
+
 	private: 
 		std::bitset<SIZE> ships;
 		std::bitset<SIZE> shots;
@@ -67,6 +78,40 @@ namespace battleship {
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Grid, ships, shots)
 	};
 
+	template<u8 ROWS, u8 COLS>
+	std::ostream& operator<<(std::ostream& os, const Grid<ROWS, COLS>& grid) {
+		os << "Grid\n";
+		os << "  ";
+		for (char letter = 'A'; letter < static_cast<char>('A' + COLS); ++letter) {
+			os << letter;
+		}
+		os << '\n';
+		os << "  ";
+		for (int col = 0; col < COLS; ++col) {
+			os << '-';
+		}
+		os << '\n';
+		for (int row = 0; row < ROWS; ++row) {
+			os << std::setw(2) << row + 1 << '|';
+			for (int col = 0; col < COLS; ++col) {
+				size_t index = Grid<ROWS, COLS>::index({row, col}).value();
+				bool is_ship = grid.ships[index];
+				bool is_shot = grid.shots[index];
+				if (is_ship && is_shot) {
+					os << 'x';
+				} else if (is_ship) {
+					os << '=';
+				} else if (is_shot) {
+					os << 'o';
+				} else {
+					os << '.';
+				}
+			}
+			os << '\n';
+		}
+		return os;
+	}
+
 	struct Ship {
 		Rectangle zone;
 
@@ -76,10 +121,6 @@ namespace battleship {
 
 		[[nodiscard]] inline u8 length() const {
 			return std::max(zone.width(), zone.height());
-		}
-
-		[[nodiscard]] inline bool touches(const Ship& other) const {
-			return zone.touches_or_intersects(other.zone);
 		}
 
 		NLOHMANN_DEFINE_TYPE_INTRUSIVE(Ship, zone)
@@ -138,8 +179,20 @@ namespace battleship {
 		}
 
 		[[nodiscard]] inline bool overlaps(const Ship& ship) const {
-			Offset one {1, 1};
-			Rectangle zone {ship.zone.first - one, ship.zone.last + one};
+			Rectangle zone {
+				{
+					static_cast<u8>((ship.zone.first.row > 0) ? ship.zone.first.row - 1 : 0),
+					static_cast<u8>((ship.zone.first.col > 0) ? ship.zone.first.col - 1 : 0)
+				},
+				{
+					static_cast<u8>(
+						(ship.zone.last.row < ROWS - 1) ? ship.zone.first.row + 1 : ROWS - 1
+					),
+					static_cast<u8>(
+						(ship.zone.last.col < COLS - 1) ? ship.zone.first.col + 1 : COLS - 1
+					)
+				}
+			};
 			return std::any_of(zone.begin(), zone.end(),
 				[this](const auto& pos){ return grid.has_ship(pos); }
 			);
@@ -179,7 +232,10 @@ namespace battleship {
 		) {
 			PlayerField field;
 			for (Ship ship: ships.ships) {
+				std::cout << json{ship} << '\n';
 				auto result = field.try_place_ship(std::move(ship));
+				std::cout << "try_place_ship() success\n";
+				std::cout << field.grid << "\n\n";
 				if (is_err(result)) {
 					return std::get<ShipPlacementError>(result);
 				}

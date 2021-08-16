@@ -91,13 +91,8 @@ namespace battleship {
 		std::vector<Room> rooms;
 		RoomMap room_map;
 	
-	    // Respond to GET request
+	    // Start game
 		if ( (req.target() == "/start") && (req.method() == http::verb::post) ) {
-			StdShips test_ships;
-			test_ships.push(Ship{{{0, 0}, {0, 3}}});
-			json j{test_ships};
-			std::cout << j << '\n';
-
 			// Check ships positions & return the result to player
 			auto ships = json::from_cbor(req.body()).get<StdShips>();
 			std::cout << "ships: " << json::from_cbor(req.body()) << std::endl;
@@ -120,7 +115,8 @@ namespace battleship {
 				http::status::bad_request, "Bad ships layout"
 			));
 		}
-		if ( (req.target() == "/shot") && (req.method() == http::verb::patch) ) {
+		// Shoot
+		if ( (req.target() == "/shoot") && (req.method() == http::verb::patch) ) {
 			json req_body = json::from_cbor(req.body());
 			UUIDVec uuid_vec {req_body.value("uuid", UUIDVec{})};
 			UUID uuid = uuid_from_span(UUIDSpan{uuid_vec});
@@ -142,7 +138,7 @@ namespace battleship {
 			UUID enemy_uuid = enemy_uuid_option.value();
 			if (!room.is_my_move(uuid)) {
 				return send(cbor_str_response(
-					http::status::locked, "Wait for enemy's turn"
+					http::status::locked, "Wait for enemy's move"
 				));
 			}
 
@@ -182,16 +178,13 @@ namespace battleship {
 					"This UUID was mapped to the room, but this room doesn't contain this UUID"
 				));
 			}
-			if (room.is_my_move(uuid)) {
-				json j;
-				j["field"] = me;
-				return send(cbor_response(
-					http::status::ok, std::move(json::to_cbor(j))
-				));
+			if (!room.is_my_move(uuid)) {
+				return send(cbor_str_response(http::status::locked, "Wait for enemy's move"));
 			}
-			return send(cbor_str_response(
-				http::status::locked, "Wait for enemy's move"
-			));
+
+			json j;
+			j["field"] = me;
+			return send(cbor_response(http::status::ok, std::move(json::to_cbor(j))));
 		}
 	}
 	
